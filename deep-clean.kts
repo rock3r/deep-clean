@@ -149,7 +149,7 @@ fun clearIdeCache(ide: Ide) {
         .forEach { if (wetRun) it.deleteRecursively() }
 }
 
-fun extractVersion(it: File, ide: Deep_clean.Ide): String {
+fun extractVersion(it: File, ide: Ide): String {
     val versionName = it.name.substringAfter(ide.folderPrefix)
     return if (versionName.startsWith("Preview")) {
         "${versionName.substring("Preview".length)} Preview"
