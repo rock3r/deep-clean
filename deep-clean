@@ -38,7 +38,7 @@ val parsedArgs: CommandLineArguments = Docopt(usage)
 
 val nukeItFromOrbit: Boolean = parsedArgs.isFlagSet("--nuke", "-n")
 val dryRun: Boolean = parsedArgs.isFlagSet("--dry-run", "-d")
-val verbose: Boolean = false || parsedArgs.isFlagSet("--verbose", "-v")
+val verbose: Boolean = dryRun || parsedArgs.isFlagSet("--verbose", "-v")
 
 if (dryRun) println("\nℹ️  This is a dry-run.\n")
 
