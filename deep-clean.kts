@@ -33,7 +33,7 @@ val gradleHome = locateGradleHome()
 assert(userHome.exists(), { "Unable to determine the user home folder, aborting..." })
 
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.1.0")
+    .withVersion("deep-clean 1.1.1")
     .parse(args.toList())
 
 val nukeItFromOrbit: Boolean = parsedArgs.isFlagSet("--nuke", "-n")
