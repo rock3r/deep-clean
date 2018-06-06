@@ -23,7 +23,7 @@ If you **have all three commands** on your `PATH`, then you can simply download
 and execute the script:
 
 ```bash
-$ [kscript] deep-clean [options]
+$ [kscript] deep-clean.kts [options]
 ```
 
 >Note: on macOS and Linux the script does not need `kscript` to be invoked, because
@@ -64,7 +64,7 @@ $ sdk install kscript
 **macOS:**
 
 ```bash
-$ brew install kotlin maven kscript
+$ brew install kotlin maven holgerbrandl/tap/kscript
 ```
 
 ## Licence
