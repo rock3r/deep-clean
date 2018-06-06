@@ -2,9 +2,12 @@
 
 @file:DependsOn("com.offbytwo:docopt:0.6.0.20150202")
 
+import Deep_clean.CommandLineArguments
 import org.docopt.Docopt
 import java.io.File
 import java.nio.file.Paths
+
+typealias CommandLineArguments = Map<String, Any>
 
 val usage = """
 This script nukes all build caches from Gradle/Android projects.
@@ -13,36 +16,43 @@ Run this in a Gradle/Android project folder.
 Usage: deep-clean [options]
 
 Options:
- --verbose -v  Print detailed information about all commands
- --dry-run -d  Don't delete anything. Useful for testing. Implies --verbose.
-
- ⚠️ THIS IS DANGEROUS SHIT ⚠️
- --nuke    -n  Super-deep clean, includes Android build cache, global
-               Gradle cache, etc. Nukes the entire thing from orbit —
-               it's the only way to be sure.
+    -d --dry-run  Don't delete anything. Useful for testing. Implies --verbose.
+    -n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean, includes
+                  Android build cache, global Gradle cache, etc. Nukes the
+                  entire thing from orbit — it's the only way to be sure.
+    -v --verbose  Print detailed information about all commands.
 """
+
 val userHome = File(System.getProperty("user.home"))
 
-val parsedArgs: Map<String, Any> = Docopt(usage).parse(args.toList())
+val parsedArgs: CommandLineArguments = Docopt(usage)
+    .withVersion("deep-clean 1.0.0")
+    .parse(args.toList())
 
-val nukeItFromOrbit: Boolean = parsedArgs["--nuke"] as Boolean
-val dryRun: Boolean = parsedArgs["--dry-run"] as Boolean
+val nukeItFromOrbit: Boolean = parsedArgs.isFlagSet("--nuke", "-n")
+val dryRun: Boolean = parsedArgs.isFlagSet("--dry-run", "-d")
+val verbose: Boolean = dryRun or parsedArgs.isFlagSet("--verbose", "-v")
+
+if (dryRun) println("\nℹ️  This is a dry-run.\n")
+
 val wetRun = dryRun.not()
-val verbose: Boolean = dryRun or parsedArgs["--verbose"] as Boolean
 val gradlew = "./gradlew" + if (isOsWindows()) ".bat" else ""
+
+fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
+    flagAliases.map { this[it] as Boolean? }.first { it != null }!!
 
 Runtime.getRuntime().apply {
     println("⏳ Executing Gradle clean...")
     execOnWetRun("$gradlew clean -q")
-        .printOutput(onlyErrors = false)
+        ?.printOutput(onlyErrors = false)
 
     println("🔫 Killing Gradle daemons...")
     execOnWetRun("$gradlew --stop")
-        .printOutput()
+        ?.printOutput()
 
     println("🔫 Killing ADB server...")
     execOnWetRun("adb kill-server")
-        .printOutput() // TODO: proper output
+        ?.printIfNoError("Adb server killed.")
     execOnWetRun("killall adb")
 
     val currentDir = File(Paths.get("").toAbsolutePath().toString())
@@ -55,17 +65,24 @@ Runtime.getRuntime().apply {
 
     if (nukeItFromOrbit) nukeGlobalCaches()
 
-    println("🔫 Killing Kotlin compile daemon...\n  Note: this kills any CLI Java instance running")
+    println("🔫 Killing Kotlin compile daemon...")
+    println("\tℹ️  Note: this kills any CLI Java instance running (including this script)")
     execOnWetRun("killall java")
 }
 
-fun Runtime.execOnWetRun(command: String) = exec(command)
+fun Runtime.execOnWetRun(command: String) = if (wetRun) exec(command) else null
 
 fun Process.printOutput(onlyErrors: Boolean = true) {
     if (onlyErrors.not()) {
-        inputStream.bufferedReader().lines().forEach { println(it) }
+        inputStream.bufferedReader().lines().forEach { println("\t$it") }
     }
-    errorStream.bufferedReader().lines().forEach { println(it) }
+    errorStream.bufferedReader().lines().forEach { println("\t$it") }
+}
+
+fun Process.printIfNoError(message: String) {
+    if (errorStream.bufferedReader().lineSequence().none()) {
+        println("\t$message")
+    }
 }
 
 fun File.deleteSubfoldersMatching(matcher: (file: File) -> Boolean) {
@@ -98,10 +115,19 @@ fun Runtime.nukeGlobalCaches() {
 fun clearIdeCache(ide: Ide) {
     locateCacheFolderFor(ide)
         .onEach {
-            println("\tClearing cache for $ide ${it.parentFile.name.substringAfter(ide.folderPrefix)}...")
+            println("\tClearing cache for $ide ${extractVersion(it.parentFile, ide)}...")
             if (verbose) println("\t  Deleting directory: ${it.absolutePath}")
         }
         .forEach { if (wetRun) it.deleteRecursively() }
+}
+
+fun extractVersion(it: File, ide: Deep_clean.Ide): String {
+    val versionName = it.name.substringAfter(ide.folderPrefix)
+    return if (versionName.startsWith("Preview")) {
+        "${versionName.substring("Preview".length)} Preview"
+    } else {
+        versionName
+    }
 }
 
 sealed class Ide(private val name: String, val folderPrefix: String) {
