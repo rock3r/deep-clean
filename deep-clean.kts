@@ -2,7 +2,6 @@
 
 @file:DependsOn("com.offbytwo:docopt:0.6.0.20150202")
 
-import Deep_clean.CommandLineArguments
 import org.docopt.Docopt
 import java.io.File
 import java.nio.file.Paths
