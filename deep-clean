@@ -103,7 +103,7 @@ fun File.deleteSubfoldersMatching(matcher: (file: File) -> Boolean) {
 
 fun Runtime.nukeGlobalCaches() {
     println()
-    println("☢️ ☢️ ☢️ ☢️ WARNING: nuke mode activated ☢️ ☢️ ☢️ ☢️ ☢️")
+    println("☢️ ☢️ ☢️ ☢️  WARNING: nuke mode activated ☢️ ☢️ ☢️ ☢️ ☢️")
     println()
     println("                     __,-~~/~    `---.")
     println("                   _/_,---(      ,    )")
