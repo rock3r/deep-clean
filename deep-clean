@@ -17,29 +17,33 @@ Usage: deep-clean [options]
 
 Options:
     -d --dry-run  Don't delete anything. Useful for testing. Implies --verbose.
-    -n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean, includes
-                  Android build cache, global Gradle cache, etc. Nukes the
-                  entire thing from orbit — it's the only way to be sure.
+    -n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
+                  This includes clearing out global folders, including:
+                   * the global Gradle cache
+                   * the wrapper-downloaded Gradle distros
+                   * the Gradle daemon data (logs, locks, etc.)
+                   * the Android build cache
+                  Nukes the entire thing from orbit — it's the only way to be sure.
     -v --verbose  Print detailed information about all commands.
 """
 
 val userHome = File(System.getProperty("user.home"))
+val gradleHome = locateGradleHome()
+
+assert(userHome.exists(), { "Unable to determine the user home folder, aborting..." })
 
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.0.0")
+    .withVersion("deep-clean 1.1.0")
     .parse(args.toList())
 
 val nukeItFromOrbit: Boolean = parsedArgs.isFlagSet("--nuke", "-n")
 val dryRun: Boolean = parsedArgs.isFlagSet("--dry-run", "-d")
-val verbose: Boolean = dryRun or parsedArgs.isFlagSet("--verbose", "-v")
+val verbose: Boolean = dryRun || parsedArgs.isFlagSet("--verbose", "-v")
 
 if (dryRun) println("\nℹ️  This is a dry-run.\n")
 
 val wetRun = dryRun.not()
 val gradlew = "./gradlew" + if (isOsWindows()) ".bat" else ""
-
-fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
-    flagAliases.map { this[it] as Boolean? }.first { it != null }!!
 
 Runtime.getRuntime().apply {
     println("⏳ Executing Gradle clean...")
@@ -70,6 +74,11 @@ Runtime.getRuntime().apply {
     execOnWetRun("killall java")
 }
 
+fun locateGradleHome() = System.getenv("GRADLE_HOME")?.let { File(it) } ?: File(userHome, ".gradle")
+
+fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
+    flagAliases.map { this[it] as Boolean? }.first { it != null }!!
+
 fun Runtime.execOnWetRun(command: String) = if (wetRun) exec(command) else null
 
 fun Process.printOutput(onlyErrors: Boolean = true) {
@@ -94,9 +103,23 @@ fun File.deleteSubfoldersMatching(matcher: (file: File) -> Boolean) {
 
 fun Runtime.nukeGlobalCaches() {
     println()
-    println("☢️ ☢ ️☢️  WARNING: nuke mode activated ☢ ️☢ ️☢️")
-    println("This will affect system-wide caches for Gradle and IDEs!")
-    println("⚠️  You will lose local version history and other IDE data!")
+    println("☢️ ☢️ ☢️ ☢️ WARNING: nuke mode activated ☢️ ☢️ ☢️ ☢️ ☢️")
+    println()
+    println("                     __,-~~/~    `---.")
+    println("                   _/_,---(      ,    )")
+    println("               __ /        <    /   )  \\___")
+    println("- ------===;;;'====------------------===;;;===----- -  -")
+    println("                  \\/  ~\"~\"~\"~\"~\"~\\~\"~)~\"/")
+    println("                  (_ (   \\  (     >    \\)")
+    println("                   \\_( _ <         >_>'")
+    println("                      ~ `-i' ::>|--\"")
+    println("                          I;|.|.|")
+    println("                         <|i::|i|`.")
+    println("                        (` ^'\"`-' \")")
+    println("------------------------------------------------------------------")
+    println("")
+    println("This will affect system-wide caches for Gradle and IDEs.")
+    println("⚠️  You will lose local version history and other IDE data! ⚠️")
     println()
 
     println("⏳ Clearing Android Gradle build cache...")
@@ -108,8 +131,13 @@ fun Runtime.nukeGlobalCaches() {
     println("🔥 Clearing ${Ide.AndroidStudio} caches...")
     clearIdeCache(Ide.AndroidStudio)
 
-    println("🔥 Clearing Gradle home directory...")
-    userHome.deleteSubfoldersMatching { it.name.toLowerCase() == ".gradle" }
+    println("🔥 Clearing Gradle global cache directories: build-scan-data, caches, daemon, wrapper...")
+    gradleHome.deleteSubfoldersMatching {
+        it.name.toLowerCase() == "build-scan-data" ||
+            it.name.toLowerCase() == "caches" ||
+            it.name.toLowerCase() == "daemon" ||
+            it.name.toLowerCase() == "wrapper"
+    }
 }
 
 fun clearIdeCache(ide: Ide) {
