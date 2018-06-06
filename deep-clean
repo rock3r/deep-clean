@@ -1,0 +1,136 @@
+#!/usr/bin/env kscript
+
+@file:DependsOn("com.offbytwo:docopt:0.6.0.20150202")
+
+import org.docopt.Docopt
+import java.io.File
+import java.nio.file.Paths
+
+val usage = """
+This script nukes all build caches from Gradle/Android projects.
+Run this in a Gradle/Android project folder.
+
+Usage: deep-clean [options]
+
+Options:
+ --verbose -v  Print detailed information about all commands
+ --dry-run -d  Don't delete anything. Useful for testing. Implies --verbose.
+
+ ⚠️ THIS IS DANGEROUS SHIT ⚠️
+ --nuke    -n  Super-deep clean, includes Android build cache, global
+               Gradle cache, etc. Nukes the entire thing from orbit —
+               it's the only way to be sure.
+"""
+val userHome = File(System.getProperty("user.home"))
+
+val parsedArgs: Map<String, Any> = Docopt(usage).parse(args.toList())
+
+val nukeItFromOrbit: Boolean = parsedArgs["--nuke"] as Boolean
+val dryRun: Boolean = parsedArgs["--dry-run"] as Boolean
+val wetRun = dryRun.not()
+val verbose: Boolean = dryRun or parsedArgs["--verbose"] as Boolean
+val gradlew = "./gradlew" + if (isOsWindows()) ".bat" else ""
+
+Runtime.getRuntime().apply {
+    println("⏳ Executing Gradle clean...")
+    execOnWetRun("$gradlew clean -q")
+        .printOutput(onlyErrors = false)
+
+    println("🔫 Killing Gradle daemons...")
+    execOnWetRun("$gradlew --stop")
+        .printOutput()
+
+    println("🔫 Killing ADB server...")
+    execOnWetRun("adb kill-server")
+        .printOutput() // TODO: proper output
+    execOnWetRun("killall adb")
+
+    val currentDir = File(Paths.get("").toAbsolutePath().toString())
+
+    println("🔥 Removing every 'build' folder...")
+    currentDir.deleteSubfoldersMatching { it.name.toLowerCase() == "build" }
+
+    println("🔥 Removing every '.gradle' folder...")
+    currentDir.deleteSubfoldersMatching { it.name.toLowerCase() == ".gradle" }
+
+    if (nukeItFromOrbit) nukeGlobalCaches()
+
+    println("🔫 Killing Kotlin compile daemon...\n  Note: this kills any CLI Java instance running")
+    execOnWetRun("killall java")
+}
+
+fun Runtime.execOnWetRun(command: String) = exec(command)
+
+fun Process.printOutput(onlyErrors: Boolean = true) {
+    if (onlyErrors.not()) {
+        inputStream.bufferedReader().lines().forEach { println(it) }
+    }
+    errorStream.bufferedReader().lines().forEach { println(it) }
+}
+
+fun File.deleteSubfoldersMatching(matcher: (file: File) -> Boolean) {
+    this.listFiles { file -> file.isDirectory }
+        .filter(matcher)
+        .onEach { if (verbose) println("\tDeleting directory: ${it.absolutePath}") }
+        .forEach { if (wetRun) it.deleteRecursively() }
+}
+
+fun Runtime.nukeGlobalCaches() {
+    println()
+    println("☢️ ☢ ️☢️  WARNING: nuke mode activated ☢ ️☢ ️☢️")
+    println("This will affect system-wide caches for Gradle and IDEs!")
+    println("⚠️  You will lose local version history and other IDE data!")
+    println()
+
+    println("⏳ Clearing Android Gradle build cache...")
+    exec("$gradlew cleanBuildCache")
+
+    println("🔥 Clearing ${Ide.IntelliJIdea} caches...")
+    clearIdeCache(Ide.IntelliJIdea)
+
+    println("🔥 Clearing ${Ide.AndroidStudio} caches...")
+    clearIdeCache(Ide.AndroidStudio)
+
+    println("🔥 Clearing Gradle home directory...")
+    userHome.deleteSubfoldersMatching { it.name.toLowerCase() == ".gradle" }
+}
+
+fun clearIdeCache(ide: Ide) {
+    locateCacheFolderFor(ide)
+        .onEach {
+            println("\tClearing cache for $ide ${it.parentFile.name.substringAfter(ide.folderPrefix)}...")
+            if (verbose) println("\t  Deleting directory: ${it.absolutePath}")
+        }
+        .forEach { if (wetRun) it.deleteRecursively() }
+}
+
+sealed class Ide(private val name: String, val folderPrefix: String) {
+    object IntelliJIdea : Ide("IntelliJ IDEA", "IntelliJIdea")
+    object AndroidStudio : Ide("Android Studio", "AndroidStudio")
+
+    override fun toString() = name
+}
+
+fun locateCacheFolderFor(ide: Ide): List<File> {
+    return when {
+        isOsWindows() || isOsLinux() -> {
+            userHome.listFiles { file -> file.isDirectory }
+                .filter { it.name.startsWith(".${ide.folderPrefix}") }
+                .map { File(it, "system") }
+        }
+        isOsMacOs() -> {
+            File(userHome, "Library/Caches")
+                .listFiles { file -> file.isDirectory }
+                .filter { it.name.startsWith(ide.folderPrefix, ignoreCase = true) }
+                .map { File(it, "system") }
+        }
+        else -> {
+            println("\tUnsupported OS, skipping.")
+            emptyList()
+        }
+    }
+}
+
+fun isOsWindows() = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+fun isOsLinux() = System.getProperty("os.name").startsWith("Linux", ignoreCase = true)
+fun isOsMacOs() = System.getProperty("os.name").startsWith("Mac", ignoreCase = true)
