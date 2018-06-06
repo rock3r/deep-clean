@@ -2,11 +2,15 @@
 A Kotlin script that nukes all build caches from Gradle/Android projects.
 Useful when Gradle or the IDE let you down 💔
 
+![deep-clean in action](https://user-images.githubusercontent.com/153802/41052522-3ed7f97e-69b9-11e8-93a0-299b5211af14.png)
+
 🎩 h/t to [@Takhion](https://github.com/Takhion) for the original idea, and to
 [@holgerbrandl](https://github.com/holgerbrandl) for KScript.
 
 The script has been tested on macOS 🍎, but it is completely untested on
-Linux 🐧 and Windows 🖥️. USE AT YOUR OWN RISK IN ANY CASE!
+Linux 🐧 and Windows 🖥️.
+
+**USE AT YOUR OWN RISK IN ANY CASE!**
 
 ## Running the script
 
@@ -30,9 +34,13 @@ Where the options are:
 
 ```
 -d --dry-run  Don't delete anything. Useful for testing. Implies --verbose.
--n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean, includes
-              Android build cache, global Gradle cache, etc. Nukes the
-              entire thing from orbit — it's the only way to be sure.
+-n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
+              This includes clearing out global folders, including:
+               * the global Gradle cache
+               * the wrapper-downloaded Gradle distros
+               * the Gradle daemon data (logs, locks, etc.)
+               * the Android build cache
+              Nukes the entire thing from orbit — it's the only way to be sure.
 -v --verbose  Print detailed information about all commands.
 ```
 
