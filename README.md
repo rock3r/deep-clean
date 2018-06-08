@@ -34,6 +34,8 @@ Where the options are:
 
 ```
 -d --dry-run  Don't delete anything. Useful for testing. Implies --verbose.
+-b --backup   Renames files and folders instead of deleting them. Implies
+              --verbose.
 -n --nuke     ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
               This includes clearing out global folders, including:
                * the global Gradle cache
