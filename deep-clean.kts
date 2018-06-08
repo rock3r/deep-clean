@@ -154,6 +154,7 @@ fun Runtime.nukeGlobalCaches() {
 
     if (gradleHome != null) {
         println("🔥 Clearing Gradle global cache directories: build-scan-data, caches, daemon, wrapper...")
+        if (verbose) println("    ℹ️  Gradle home found at: ${gradleHome.absolutePath}")
         gradleHome.removeSubfoldersMatching {
             it.name.toLowerCase() == "build-scan-data" ||
                 it.name.toLowerCase() == "caches" ||
@@ -163,7 +164,6 @@ fun Runtime.nukeGlobalCaches() {
     } else {
         println("⚠️  Unable to locate Gradle home directory. Checked \$GRADLE_HOME and ~/.gradle")
     }
-    println()
     println()
 }
 
@@ -220,7 +220,6 @@ fun extractVersion(it: File, ide: Ide): String {
 fun File.removeSubfoldersMatching(matcher: (file: File) -> Boolean) {
     val matchingDirectories = this.listFiles { file -> file.isDirectory }
         .asSequence()
-        .onEach { println("      ${it.absolutePath}") }
         .filter(matcher)
 
     when {
@@ -232,7 +231,7 @@ fun File.removeSubfoldersMatching(matcher: (file: File) -> Boolean) {
 fun Sequence<File>.backupAndDeleteByRenaming() =
     this.onEach { if (verbose) println("      📁  Deleting directory: ${it.absolutePath}") }
         .map { Pair(it, generateBackupNameFor(it)) }
-        .onEach { (_, backup) -> if (verbose) println("        ✅ ️ Backed up to: ${backup.name}") }
+        .onEach { (_, backup) -> if (verbose) println("        ☑️️  Backing up to: ${backup.name}") }
         .onEach { println() }
         .forEach { (original, backup) -> if (wetRun) original.renameTo(backup) }
 
