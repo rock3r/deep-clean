@@ -2,7 +2,7 @@
 A Kotlin script that nukes all build caches from Gradle/Android projects.
 Useful when Gradle or the IDE let you down 💔
 
-![deep-clean in action](https://user-images.githubusercontent.com/153802/41052669-bc212d4c-69b9-11e8-8bf4-12eea6dbb7f2.png)
+![deep-clean in action](https://user-images.githubusercontent.com/153802/41173653-ab0ae36c-6b4f-11e8-8f98-8dba4340add7.png)
 
 🎩 h/t to [@Takhion](https://github.com/Takhion) for the original idea, and to
 [@holgerbrandl](https://github.com/holgerbrandl) for KScript.
