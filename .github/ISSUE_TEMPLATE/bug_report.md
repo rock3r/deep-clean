@@ -20,16 +20,12 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**System information**
+ - OS version: [e.g., macOS 10.13.5]
+ - Kotlin version: [e.g., 1.2.50 (run `kotlinc -version`)]
+ - Maven version:  [e.g., 3.5.3 (run `mvn -version`)] 
+ - KScript version:  [e.g.,  (run `kscript`)]
+ - Script version: [e.g., 1.0.1 (run `deep-clean.kts --version`)]
 
 **Additional context**
 Add any other context about the problem here.
