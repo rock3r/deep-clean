@@ -23,6 +23,7 @@ If you **have all three commands** on your `PATH`, then you can simply download
 and execute the script:
 
 ```bash
+$ cd /your/project/root.folder
 $ [kscript] deep-clean.kts [options]
 ```
 
