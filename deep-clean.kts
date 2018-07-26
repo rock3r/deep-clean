@@ -25,6 +25,8 @@ Options:
                           .idea folder in the current directory.
     -p --ide-preferences  ⚠️  THIS IS DANGEROUS SHIT ⚠️  Will wipe your IDE settings!
                           This deletes the GLOBAL IDEA/Android Studio preferences.
+                          This option requires the --nuke option to be active too, since
+                          it touches global system state.
     --not-recursive       Don't recursively search sub-folders of this folder for matches.
                           The default behaviour is to look for matches in sub-directories,
                           since things like 'build' folders and '.iml' files are not all
@@ -49,22 +51,23 @@ val workingDir = File(Paths.get("").toAbsolutePath().toString())
 
 assert(userHome.exists()) { "Unable to determine the user home folder, aborting..." }
 
-println(args.toList())
-println()
-
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.3.0")
+    .withVersion("deep-clean 1.3.1")
     .parse(args.toList())
-
-println(parsedArgs.toList())
 
 val nukeItFromOrbit = parsedArgs.isFlagSet("--nuke", "-n")
 val ideFiles = parsedArgs.isFlagSet("--ide-files", "-i")
-val idePreferences = parsedArgs.isFlagSet("--ide-preferences", "-p")
+val shouldAlsoClearIdePreferences = parsedArgs.isFlagSet("--ide-preferences", "-p")
+val idePreferences = shouldAlsoClearIdePreferences && nukeItFromOrbit
 val recursively = parsedArgs.isFlagSet("--not-recursive").not()
 val dryRun = parsedArgs.isFlagSet("--dry-run", "-d")
 val backup = parsedArgs.isFlagSet("--backup", "-b")
 val verbose = backup || dryRun || parsedArgs.isFlagSet("--verbose", "-v")
+
+if (shouldAlsoClearIdePreferences != idePreferences) {
+    println("\n⚠️  To clear the IDE preferences you must also enable nuke mode.")
+    System.exit(1)
+}
 
 if (dryRun) println("\nℹ️  This is a dry-run. No files will be moved/deleted.\n")
 
