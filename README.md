@@ -42,6 +42,8 @@ Where the options are:
                       .idea folder in the current directory.
 -p --ide-preferences  ⚠️  THIS IS DANGEROUS SHIT ⚠️  Will wipe your IDE settings!
                       This deletes the GLOBAL IDEA/Android Studio preferences.
+                      This option requires the --nuke option to be active too, since
+                      it touches global system state.
 --not-recursive       Don't recursively search sub-folders of this folder for matches.
                       The default behaviour is to look for matches in sub-directories,
                       since things like 'build' folders and '.iml' files are not all
