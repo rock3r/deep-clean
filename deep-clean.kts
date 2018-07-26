@@ -118,6 +118,10 @@ Runtime.getRuntime().apply {
     println()
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 fun locateGradleHome(): File? {
     val envGradleHome = System.getenv("GRADLE_HOME")
         ?.let { File(it) }
@@ -189,15 +193,6 @@ fun printIdePreferencesWarning(timeoutSeconds: Long) {
     Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSeconds))
 }
 
-fun nukeIdeaProjectSettingsFolder() {
-    printInBold("🔥 Removing IntelliJ IDEA/Android Studio '.idea' folders...")
-
-    workingDir.removeSubfoldersMatching {
-        it.isDirectory && it.name.equals(".idea", ignoreCase = true)
-    }
-    println()
-}
-
 fun clearIdePreferences() {
     printInBold("🔥 Clearing ${Ide.IntelliJIdea} preferences...")
     clearIdePreferences(Ide.IntelliJIdea)
@@ -208,30 +203,48 @@ fun clearIdePreferences() {
     println()
 }
 
-fun Runtime.nukeGlobalCaches() {
-    printInBold("⏳ Clearing Android Gradle build cache...")
-    exec("$gradlew cleanBuildCache")
-    println()
+fun clearIdePreferences(ide: Ide) {
+    val preferencesDirectories = locatePreferencesFolderFor(ide)
 
-    printInBold("🔥 Clearing ${Ide.IntelliJIdea} caches...")
-    clearIdeCache(Ide.IntelliJIdea)
-    println()
+    when {
+        backup -> preferencesDirectories
+            .onEach {
+                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
+            }
+            .backupAndDeleteByRenaming()
+        else -> preferencesDirectories
+            .onEach {
+                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
+            }
+            .deleteRecursively()
+    }
+}
 
-    printInBold("🔥 Clearing ${Ide.AndroidStudio} caches...")
-    clearIdeCache(Ide.AndroidStudio)
-    println()
-
-    printInBold("🔥 Clearing Gradle global cache directories: build-scan-data, caches, daemon, wrapper...")
-    if (gradleHome != null) {
-        if (verbose) println("     ℹ️  Gradle home found at: ${gradleHome.absolutePath}")
-        gradleHome.removeSubfoldersMatching {
-            it.name.toLowerCase() == "build-scan-data" ||
-                it.name.toLowerCase() == "caches" ||
-                it.name.toLowerCase() == "daemon" ||
-                it.name.toLowerCase() == "wrapper"
+fun locatePreferencesFolderFor(ide: Ide): Sequence<File> =
+    when {
+        isOsWindows() || isOsLinux() -> {
+            userHome.listContents(recursively = false) {
+                it.isDirectory && it.name.startsWith(".${ide.folderPrefix}")
+            }
         }
-    } else {
-        println("     ⚠️  Unable to locate Gradle home directory. Checked \$GRADLE_HOME and ~/.gradle")
+        isOsMacOs() -> {
+            File(userHome, "Library/Preferences")
+                .listContents(recursively = false) {
+                    it.isDirectory && it.name.startsWith(ide.folderPrefix, ignoreCase = true)
+                }
+        }
+        else -> {
+            println("     ⚠️  Unsupported OS, skipping.")
+            emptySequence()
+        }
+    }
+        .filter { it.exists() }
+
+fun nukeIdeaProjectSettingsFolder() {
+    printInBold("🔥 Removing IntelliJ IDEA/Android Studio '.idea' folders...")
+
+    workingDir.removeSubfoldersMatching {
+        it.isDirectory && it.name.equals(".idea", ignoreCase = true)
     }
     println()
 }
@@ -263,20 +276,38 @@ fun printNukeModeWarning(timeoutSeconds: Long) {
     Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSeconds))
 }
 
-fun clearIdePreferences(ide: Ide) {
-    val preferencesDirectories = locatePreferencesFolderFor(ide)
+fun Runtime.nukeGlobalCaches() {
+    printInBold("⏳ Clearing Android Gradle build cache...")
+    exec("$gradlew cleanBuildCache")
+    println()
 
+    printInBold("🔥 Clearing ${Ide.IntelliJIdea} caches...")
+    clearIdeCache(Ide.IntelliJIdea)
+    println()
+
+    printInBold("🔥 Clearing ${Ide.AndroidStudio} caches...")
+    clearIdeCache(Ide.AndroidStudio)
+    println()
+
+    printInBold("🔥 Clearing Gradle global cache directories: build-scan-data, caches, daemon, wrapper...")
+    if (gradleHome != null) {
+        if (verbose) println("     ℹ️  Gradle home found at: ${gradleHome.absolutePath}")
+        gradleHome.removeSubfoldersMatching {
+            it.name.toLowerCase() == "build-scan-data" ||
+                it.name.toLowerCase() == "caches" ||
+                it.name.toLowerCase() == "daemon" ||
+                it.name.toLowerCase() == "wrapper"
+        }
+    } else {
+        println("     ⚠️  Unable to locate Gradle home directory. Checked \$GRADLE_HOME and ~/.gradle")
+    }
+    println()
+}
+
+fun printInBold(message: String) {
     when {
-        backup -> preferencesDirectories
-            .onEach {
-                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
-            }
-            .backupAndDeleteByRenaming()
-        else -> preferencesDirectories
-            .onEach {
-                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
-            }
-            .deleteRecursively()
+        isOsWindows() -> println(message)
+        else -> println("\u001B[1;37m$message\u001B[0;37m")
     }
 }
 
@@ -306,26 +337,6 @@ fun locateCacheFolderFor(ide: Ide): Sequence<File> =
         }
         isOsMacOs() -> {
             File(userHome, "Library/Caches")
-                .listContents(recursively = false) {
-                    it.isDirectory && it.name.startsWith(ide.folderPrefix, ignoreCase = true)
-                }
-        }
-        else -> {
-            println("     ⚠️  Unsupported OS, skipping.")
-            emptySequence()
-        }
-    }
-        .filter { it.exists() }
-
-fun locatePreferencesFolderFor(ide: Ide): Sequence<File> =
-    when {
-        isOsWindows() || isOsLinux() -> {
-            userHome.listContents(recursively = false) {
-                it.isDirectory && it.name.startsWith(".${ide.folderPrefix}")
-            }
-        }
-        isOsMacOs() -> {
-            File(userHome, "Library/Preferences")
                 .listContents(recursively = false) {
                     it.isDirectory && it.name.startsWith(ide.folderPrefix, ignoreCase = true)
                 }
@@ -393,13 +404,6 @@ fun generateBackupNameFor(file: File): File {
 fun Sequence<File>.deleteRecursively() =
     this.onEach { if (verbose) println("     Deleting: ${it.absolutePath}") }
         .forEach { if (wetRun) it.deleteRecursively() }
-
-fun printInBold(message: String) {
-    when {
-        isOsWindows() -> println(message)
-        else -> println("\u001B[1;37m$message\u001B[0;37m")
-    }
-}
 
 fun isOsWindows() = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
 
