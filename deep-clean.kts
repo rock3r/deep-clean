@@ -2,6 +2,7 @@
 
 @file:DependsOn("com.offbytwo:docopt:0.6.0.20150202")
 
+import Deep_clean.CommandLineArguments
 import org.docopt.Docopt
 import java.io.File
 import java.nio.file.Paths
@@ -16,27 +17,29 @@ Run this in a Gradle/Android project folder.
 Usage: deep-clean [options]
 
 Options:
-    -d --dry-run     Don't delete anything. Useful for testing. Implies --verbose.
-    -b --backup      Renames files and folders instead of deleting them. Implies
-                     --verbose.
-    -i --ide         This also deletes IDEA/Android Studio project files (*.iml).
-                     If used in conjunction with --nuke it will also delete the
-                     .idea folder in the current directory.
-    -n --nuke        ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
-                     This includes clearing out global folders, including:
-                      * the global Gradle cache
-                      * the wrapper-downloaded Gradle distros
-                      * the Gradle daemon data (logs, locks, etc.)
-                      * the Android build cache
-                     Nukes the entire thing from orbit — it's the only way to be sure.
-    --not-recursive  Don't recursively search sub-folders of this folder for matches.
-                     The default behaviour is to look for matches in sub-directories,
-                     since things like 'build' folders and '.iml' files are not all
-                     found at the top level of a project directory structure. This
-                     flag is useful if you know you have matches you want to keep,
-                     e.g., if your code contains a package with a name like 'build'.
-                     This option severely limits the effectiveness of the deep clean.
-    -v --verbose     Print detailed information about all commands.
+    -b --backup           Renames files and folders instead of deleting them. Implies
+                          --verbose.
+    -d --dry-run          Don't delete anything. Useful for testing. Implies --verbose.
+    -i --ide-files        This also deletes IDEA/Android Studio project files (*.iml).
+                          If used in conjunction with --nuke it will also delete the
+                          .idea folder in the current directory.
+    -p --ide-preferences  ⚠️  THIS IS DANGEROUS SHIT ⚠️  Will wipe your IDE settings!
+                          This deletes the GLOBAL IDEA/Android Studio preferences.
+    --not-recursive       Don't recursively search sub-folders of this folder for matches.
+                          The default behaviour is to look for matches in sub-directories,
+                          since things like 'build' folders and '.iml' files are not all
+                          found at the top level of a project directory structure. This
+                          flag is useful if you know you have matches you want to keep,
+                          e.g., if your code contains a package with a name like 'build'.
+                          This option severely limits the effectiveness of the deep clean.
+    -n --nuke             ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
+                          This includes clearing out global folders, including:
+                           * the global Gradle cache
+                           * the wrapper-downloaded Gradle distros
+                           * the Gradle daemon data (logs, locks, etc.)
+                           * the Android build cache
+                          Nukes the entire thing from orbit — it's the only way to be sure.
+    -v --verbose          Print detailed information about all commands.
 """
 
 val userHome = File(System.getProperty("user.home"))
@@ -44,14 +47,20 @@ val gradleHome = locateGradleHome()
 
 val workingDir = File(Paths.get("").toAbsolutePath().toString())
 
-assert(userHome.exists(), { "Unable to determine the user home folder, aborting..." })
+assert(userHome.exists()) { "Unable to determine the user home folder, aborting..." }
+
+println(args.toList())
+println()
 
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.2.0")
+    .withVersion("deep-clean 1.3.0")
     .parse(args.toList())
 
+println(parsedArgs.toList())
+
 val nukeItFromOrbit = parsedArgs.isFlagSet("--nuke", "-n")
-val ideFiles = parsedArgs.isFlagSet("--ide", "-i")
+val ideFiles = parsedArgs.isFlagSet("--ide-files", "-i")
+val idePreferences = parsedArgs.isFlagSet("--ide-preferences", "-p")
 val recursively = parsedArgs.isFlagSet("--not-recursive").not()
 val dryRun = parsedArgs.isFlagSet("--dry-run", "-d")
 val backup = parsedArgs.isFlagSet("--backup", "-b")
@@ -89,10 +98,16 @@ Runtime.getRuntime().apply {
 
     if (ideFiles) deleteIdeaProjectFiles()
 
+    if (idePreferences) {
+        printIdePreferencesWarning(timeoutSeconds = 3)
+
+        clearIdePreferences()
+    }
+
     if (nukeItFromOrbit) {
         printNukeModeWarning(timeoutSeconds = 3)
 
-        if (ideFiles) nukeIdeaSettingsFolder()
+        if (ideFiles) nukeIdeaProjectSettingsFolder()
 
         nukeGlobalCaches()
     }
@@ -116,7 +131,8 @@ fun locateGradleHome(): File? {
 }
 
 fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
-    flagAliases.map { this[it] as Boolean? }.first { it != null }!!
+    flagAliases.map { this[it] as Boolean? }
+        .first { it != null }!!
 
 fun Runtime.execOnWetRun(command: String) = if (wetRun) exec(command) else null
 
@@ -151,12 +167,44 @@ fun File.removeFilesWithExtension(extension: String) {
     }
 }
 
-fun nukeIdeaSettingsFolder() {
+fun printIdePreferencesWarning(timeoutSeconds: Long) {
+    printInBold("⚠️  ⚠️  ⚠️  ⚠️  WARNING: deleting IDE settings ⚠️  ⚠️  ⚠️  ⚠️  ")
+    println()
+    println("               (  .      )")
+    println("           )           (              )")
+    println("                 .  '   .   '  .  '  .")
+    println("        (    , )       (.   )  (   ',    )")
+    println("         .' ) ( . )    ,  ( ,     )   ( .")
+    println("      ). , ( .   (  ) ( , ')  .' (  ,    )")
+    println("     (_,) . ), ) _) _,')  (, ) '. )  ,. (' )")
+    println(" jgs^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+    println()
+    println("⚠️  This will reset all your IDE preferences! ⚠️")
+    println()
+    printInBold("    ⏲️  You have $timeoutSeconds seconds to cancel! ⏲️")
+    println("       Press Ctrl-C to stop now.")
+    println()
+    println()
+
+    Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSeconds))
+}
+
+fun nukeIdeaProjectSettingsFolder() {
     printInBold("🔥 Removing IntelliJ IDEA/Android Studio '.idea' folders...")
 
     workingDir.removeSubfoldersMatching {
         it.isDirectory && it.name.equals(".idea", ignoreCase = true)
     }
+    println()
+}
+
+fun clearIdePreferences() {
+    printInBold("🔥 Clearing ${Ide.IntelliJIdea} preferences...")
+    clearIdePreferences(Ide.IntelliJIdea)
+    println()
+
+    printInBold("🔥 Clearing ${Ide.AndroidStudio} preferences...")
+    clearIdePreferences(Ide.AndroidStudio)
     println()
 }
 
@@ -215,6 +263,23 @@ fun printNukeModeWarning(timeoutSeconds: Long) {
     Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSeconds))
 }
 
+fun clearIdePreferences(ide: Ide) {
+    val preferencesDirectories = locatePreferencesFolderFor(ide)
+
+    when {
+        backup -> preferencesDirectories
+            .onEach {
+                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
+            }
+            .backupAndDeleteByRenaming()
+        else -> preferencesDirectories
+            .onEach {
+                println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
+            }
+            .deleteRecursively()
+    }
+}
+
 fun clearIdeCache(ide: Ide) {
     val cacheDirectories = locateCacheFolderFor(ide)
 
@@ -241,6 +306,26 @@ fun locateCacheFolderFor(ide: Ide): Sequence<File> =
         }
         isOsMacOs() -> {
             File(userHome, "Library/Caches")
+                .listContents(recursively = false) {
+                    it.isDirectory && it.name.startsWith(ide.folderPrefix, ignoreCase = true)
+                }
+        }
+        else -> {
+            println("     ⚠️  Unsupported OS, skipping.")
+            emptySequence()
+        }
+    }
+        .filter { it.exists() }
+
+fun locatePreferencesFolderFor(ide: Ide): Sequence<File> =
+    when {
+        isOsWindows() || isOsLinux() -> {
+            userHome.listContents(recursively = false) {
+                it.isDirectory && it.name.startsWith(".${ide.folderPrefix}")
+            }
+        }
+        isOsMacOs() -> {
+            File(userHome, "Library/Preferences")
                 .listContents(recursively = false) {
                     it.isDirectory && it.name.startsWith(ide.folderPrefix, ignoreCase = true)
                 }
@@ -320,9 +405,9 @@ fun isOsWindows() = System.getProperty("os.name").startsWith("Windows", ignoreCa
 
 sealed class Ide(private val name: String, val folderPrefix: String) {
 
-    object IntelliJIdea : Ide("IntelliJ IDEA", "IntelliJIdea")
+    object IntelliJIdea : Ide(name = "IntelliJ IDEA", folderPrefix = "IntelliJIdea")
 
-    object AndroidStudio : Ide("Android Studio", "AndroidStudio")
+    object AndroidStudio : Ide(name = "Android Studio", folderPrefix = "AndroidStudio")
 
     override fun toString() = name
 }
