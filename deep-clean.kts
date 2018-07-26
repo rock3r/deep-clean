@@ -52,7 +52,7 @@ val workingDir = File(Paths.get("").toAbsolutePath().toString())
 assert(userHome.exists()) { "Unable to determine the user home folder, aborting..." }
 
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.3.1")
+    .withVersion("deep-clean 1.4.0")
     .parse(args.toList())
 
 val nukeItFromOrbit = parsedArgs.isFlagSet("--nuke", "-n")
