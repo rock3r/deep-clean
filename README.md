@@ -10,6 +10,8 @@ Useful when Gradle or the IDE let you down 💔
 The script has been tested on macOS 🍎, but it is completely untested on
 Linux 🐧 and Windows 🖥️.
 
+⚠️There may be [major issues](https://github.com/rock3r/deep-clean/issues/4) on Windows/Linux when using `-n`, please let me know if you encounter any such issue!
+
 **USE AT YOUR OWN RISK IN ANY CASE!**
 
 ## Running the script
