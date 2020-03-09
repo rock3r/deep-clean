@@ -168,9 +168,10 @@ fun File.removeFilesWithExtension(extension: String) {
             !it.isDirectory && it.extension.equals(extension, ignoreCase = true)
         }
 
-    when {
-        backup -> matchingFiles.backupAndDeleteByRenaming()
-        else -> matchingFiles.deleteRecursively()
+    if (backup) {
+        matchingFiles.backupAndDeleteByRenaming()
+    } else {
+        matchingFiles.deleteRecursively()
     }
 }
 
@@ -209,13 +210,14 @@ fun clearIdePreferences() {
 fun clearIdePreferences(ide: Ide) {
     val preferencesDirectories = locatePreferencesFolderFor(ide)
 
-    when {
-        backup -> preferencesDirectories
+    if (backup) {
+        preferencesDirectories
             .onEach {
                 println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
             }
             .backupAndDeleteByRenaming()
-        else -> preferencesDirectories
+    } else {
+        preferencesDirectories
             .onEach {
                 println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
             }
@@ -308,22 +310,24 @@ fun Runtime.nukeGlobalCaches() {
 }
 
 fun printInBold(message: String) {
-    when {
-        isOsWindows() -> println(message)
-        else -> println("\u001B[1;37m$message\u001B[0;37m")
+    if (isOsWindows()) {
+        println(message)
+    } else {
+        println("\u001B[1;37m$message\u001B[0;37m")
     }
 }
 
 fun clearIdeCache(ide: Ide) {
     val cacheDirectories = locateCacheFolderFor(ide)
 
-    when {
-        backup -> cacheDirectories
-            .onEach {
-                println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
-            }
-            .backupAndDeleteByRenaming()
-        else -> cacheDirectories
+    if (backup) {
+        cacheDirectories
+           .onEach {
+               println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
+           }
+           .backupAndDeleteByRenaming()
+    } else {
+        cacheDirectories
             .onEach {
                 println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
             }
@@ -369,9 +373,10 @@ fun File.removeSubfoldersMatching(matcher: (file: File) -> Boolean) {
             it.isDirectory && matcher(it)
         }
 
-    when {
-        backup -> matchingDirectories.backupAndDeleteByRenaming()
-        else -> matchingDirectories.deleteRecursively()
+    if (backup) {
+        matchingDirectories.backupAndDeleteByRenaming()
+    } else {
+        matchingDirectories.deleteRecursively()
     }
 }
 
