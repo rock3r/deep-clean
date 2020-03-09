@@ -223,7 +223,6 @@ fun clearIdePreferences(ide: Ide) {
             }
             .deleteRecursively()
     }
-        
 }
 
 fun locatePreferencesFolderFor(ide: Ide): Sequence<File> =
@@ -376,7 +375,7 @@ fun File.removeSubfoldersMatching(matcher: (file: File) -> Boolean) {
 
     if (backup) {
         matchingDirectories.backupAndDeleteByRenaming()
-    } else { 
+    } else {
         matchingDirectories.deleteRecursively()
     }
 }
