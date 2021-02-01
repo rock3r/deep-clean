@@ -5,6 +5,7 @@
 import Deep_clean.CommandLineArguments
 import org.docopt.Docopt
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
@@ -52,7 +53,7 @@ val workingDir = File(Paths.get("").toAbsolutePath().toString())
 assert(userHome.exists()) { "Unable to determine the user home folder, aborting..." }
 
 val parsedArgs: CommandLineArguments = Docopt(usage)
-    .withVersion("deep-clean 1.4.0")
+    .withVersion("deep-clean 1.5.0")
     .parse(args.toList())
 
 val nukeItFromOrbit = parsedArgs.isFlagSet("--nuke", "-n")
@@ -66,7 +67,6 @@ val verbose = backup || dryRun || parsedArgs.isFlagSet("--verbose", "-v")
 
 if (shouldAlsoClearIdePreferences != idePreferences) {
     println("\n⚠️  To clear the IDE preferences you must also enable nuke mode.")
-    System.exit(1)
 }
 
 if (dryRun) println("\nℹ️  This is a dry-run. No files will be moved/deleted.\n")
@@ -76,19 +76,21 @@ val gradlew = "./gradlew" + if (isOsWindows()) ".bat" else ""
 
 Runtime.getRuntime().apply {
     printInBold("⏳ Executing Gradle clean...")
-    execOnWetRun("$gradlew clean -q")
-        ?.printOutput(onlyErrors = !verbose)
+    doWithGradleWrapper {
+        execOnWetRun("$gradlew clean -q")
+            ?.printOutput(onlyErrors = !verbose)
+    }
     println()
 
     printInBold("🔫 Killing Gradle daemon...")
-    execOnWetRun("$gradlew --stop")
-        ?.printOutput()
+    doWithGradleWrapper {
+        execOnWetRun("$gradlew --stop")
+            ?.printOutput()
+    }
     println()
 
     printInBold("🔫 Killing ADB server...")
-    execOnWetRun("adb kill-server")
-        ?.printIfNoError("Adb server killed.")
-    execOnWetRun("killall adb")
+    killAdb()
     println()
 
     printInBold("🔥 Removing every 'build' folder...")
@@ -156,6 +158,31 @@ fun Process.printIfNoError(message: String) {
     }
 }
 
+fun Runtime.doWithGradleWrapper(action: () -> Unit) {
+    if (!Files.exists(Paths.get("gradlew")) && !isExecutableOnPath("adb")) {
+        println("⚠️  Gradle wrapper not found. Nothing to do here.")
+        return
+    }
+
+    action()
+}
+
+fun Runtime.killAdb() {
+    if (!isExecutableOnPath("adb")) {
+        println("⚠️  ADB not found. Nothing to do here.")
+        return
+    }
+
+    execOnWetRun("adb kill-server")
+        ?.printIfNoError("Adb server killed.")
+    execOnWetRun("killall adb")
+}
+
+fun Runtime.isExecutableOnPath(executableName: String) =
+    System.getenv("PATH").split(File.pathSeparator)
+        .map(Paths::get)
+        .any { pathEntry -> Files.exists(pathEntry.resolve(executableName)) }
+
 fun deleteIdeaProjectFiles() {
     printInBold("🔥 Removing IntelliJ IDEA/Android Studio '.iml' project files...")
     workingDir.removeFilesWithExtension("iml")
@@ -168,10 +195,9 @@ fun File.removeFilesWithExtension(extension: String) {
             !it.isDirectory && it.extension.equals(extension, ignoreCase = true)
         }
 
-    if (backup) {
-        matchingFiles.backupAndDeleteByRenaming()
-    } else {
-        matchingFiles.deleteRecursively()
+    when {
+        backup -> matchingFiles.backupAndDeleteByRenaming()
+        else -> matchingFiles.deleteRecursively()
     }
 }
 
@@ -210,14 +236,13 @@ fun clearIdePreferences() {
 fun clearIdePreferences(ide: Ide) {
     val preferencesDirectories = locatePreferencesFolderFor(ide)
 
-    if (backup) {
-        preferencesDirectories
+    when {
+        backup -> preferencesDirectories
             .onEach {
                 println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
             }
             .backupAndDeleteByRenaming()
-    } else {
-        preferencesDirectories
+        else -> preferencesDirectories
             .onEach {
                 println("     ℹ️  Clearing preferences for $ide ${extractVersion(it, ide)}...")
             }
@@ -310,24 +335,22 @@ fun Runtime.nukeGlobalCaches() {
 }
 
 fun printInBold(message: String) {
-    if (isOsWindows()) {
-        println(message)
-    } else {
-        println("\u001B[1;37m$message\u001B[0;37m")
+    when {
+        isOsWindows() -> println(message)
+        else -> println("\u001B[1;37m$message\u001B[0;37m")
     }
 }
 
 fun clearIdeCache(ide: Ide) {
     val cacheDirectories = locateCacheFolderFor(ide)
 
-    if (backup) {
-        cacheDirectories
-           .onEach {
-               println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
-           }
-           .backupAndDeleteByRenaming()
-    } else {
-        cacheDirectories
+    when {
+        backup -> cacheDirectories
+            .onEach {
+                println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
+            }
+            .backupAndDeleteByRenaming()
+        else -> cacheDirectories
             .onEach {
                 println("     ℹ️  Clearing cache for $ide ${extractVersion(it, ide)}...")
             }
@@ -373,15 +396,14 @@ fun File.removeSubfoldersMatching(matcher: (file: File) -> Boolean) {
             it.isDirectory && matcher(it)
         }
 
-    if (backup) {
-        matchingDirectories.backupAndDeleteByRenaming()
-    } else {
-        matchingDirectories.deleteRecursively()
+    when {
+        backup -> matchingDirectories.backupAndDeleteByRenaming()
+        else -> matchingDirectories.deleteRecursively()
     }
 }
 
 fun File.listContents(recursively: Boolean, matcher: (File) -> Boolean): Sequence<File> =
-    this.listFiles()
+    listFiles()!!
         .asSequence()
         .flatMap {
             when {
