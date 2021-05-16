@@ -47,6 +47,7 @@ Options:
 
 val userHome = File(System.getProperty("user.home"))
 val gradleHome = locateGradleHome()
+val mavenLocalRepository = locateMavenLocalRepository()
 
 val workingDir = File(Paths.get("").toAbsolutePath().toString())
 
@@ -137,6 +138,12 @@ fun locateGradleHome(): File? {
         userGradleHome.exists() -> userGradleHome
         else -> null
     }
+}
+
+fun locateMavenLocalRepository(): File? {
+    val mavenHome = File(userHome, ".m2")
+
+    return if (mavenHome.exists()) mavenHome else null
 }
 
 fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
@@ -318,6 +325,14 @@ fun Runtime.nukeGlobalCaches() {
     printInBold("🔥 Clearing ${Ide.AndroidStudio} caches...")
     clearIdeCache(Ide.AndroidStudio)
     println()
+
+    printInBold("🔥 Clearing Maven local repository artefacts...")
+    if(mavenLocalRepository != null) {
+        if (verbose) println("     ℹ️  Maven local repository found at: ${mavenLocalRepository.absolutePath}")
+        mavenLocalRepository.removeSubfoldersMatching { it.name.toLowerCase() == "repository" }
+    } else {
+        println("     ⚠️  Unable to locate Maven local repository. Checked ~/.m2")
+    }
 
     printInBold("🔥 Clearing Gradle global cache directories: build-scan-data, caches, daemon, wrapper...")
     if (gradleHome != null) {
