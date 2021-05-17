@@ -142,9 +142,7 @@ fun locateGradleHome(): File? {
 }
 
 fun locateMavenLocalRepository(): File? {
-    val mavenHome = File(userHome, ".m2")
-
-    return if (mavenHome.exists()) mavenHome else null
+    return File(userHome, ".m2").takeIf { it.exists() }
 }
 
 fun CommandLineArguments.isFlagSet(vararg flagAliases: String): Boolean =
@@ -328,7 +326,7 @@ fun Runtime.nukeGlobalCaches() {
     println()
 
     printInBold("🔥 Clearing Maven local repository artefacts...")
-    if(mavenLocalRepository != null) {
+    if (mavenLocalRepository != null) {
         if (verbose) println("     ℹ️  Maven local repository found at: ${mavenLocalRepository.absolutePath}")
         mavenLocalRepository.removeSubfoldersMatching { it.name.toLowerCase() == "repository" }
     } else {
