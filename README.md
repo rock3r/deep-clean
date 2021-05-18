@@ -56,6 +56,7 @@ Where the options are:
 -n --nuke             ⚠️  THIS IS DANGEROUS SHIT ⚠️  Super-deep clean
                       This includes clearing out global folders, including:
                        * the global Gradle cache
+                       * the global Maven artefacts
                        * the wrapper-downloaded Gradle distros
                        * the Gradle daemon data (logs, locks, etc.)
                        * the Android build cache
