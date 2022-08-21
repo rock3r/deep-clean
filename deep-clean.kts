@@ -338,9 +338,9 @@ fun Runtime.nukeGlobalCaches() {
         if (verbose) println("     ℹ️  Gradle home found at: ${gradleHome.absolutePath}")
         gradleHome.removeSubfoldersMatching {
             it.name.toLowerCase() == "build-scan-data" ||
-                it.name.toLowerCase() == "caches" ||
-                it.name.toLowerCase() == "daemon" ||
-                it.name.toLowerCase() == "wrapper"
+                    it.name.toLowerCase() == "caches" ||
+                    it.name.toLowerCase() == "daemon" ||
+                    it.name.toLowerCase() == "wrapper"
         }
     } else {
         println("     ⚠️  Unable to locate Gradle home directory. Checked \$GRADLE_HOME and ~/.gradle")
