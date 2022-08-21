@@ -8,9 +8,10 @@ Useful when Gradle or the IDE let you down 💔
 [@holgerbrandl](https://github.com/holgerbrandl) for KScript.
 
 The script has been tested on macOS 🍎, but it is completely untested on
-Linux 🐧 and Windows 🖥️.
+Linux 🐧 and Windows 🖥️. KScript may not work at all on Windows!
 
-⚠️There may be [major issues](https://github.com/rock3r/deep-clean/issues/4) on Windows/Linux when using `-n`, please let me know if you encounter any such issue!
+⚠️There may be [major issues](https://github.com/rock3r/deep-clean/issues/4) on Windows/Linux when using `-n`,
+please let me know if you encounter any such issue!
 
 **USE AT YOUR OWN RISK IN ANY CASE!**
 
@@ -64,16 +65,15 @@ Where the options are:
 -v --verbose          Print detailed information about all commands.
 ```
 
+For this script to work, you need to have `kotlin`, `kscript` and `maven` on your `PATH`.
 If you **DON'T have all three commands** on your `PATH`, then read on to the next
 section to install them.
 
 ## Installing the script dependencies
 
 To make the script run, we'll first need to install all the required dependencies.
-All dependencies are available on [SDKMan!](https://sdkman.io/) (Windows, Linux, macOS)
-and on [Homebrew](https://brew.sh/) (macOS only).
-
-**Windows, Linux:**
+All dependencies are available on [SDKMan!](https://sdkman.io/) (Windows, Linux, macOS).
+**Note that KScript support for Windows is not officially available yet**.
 
 ```bash
 $ sdk install kotlin
@@ -81,16 +81,10 @@ $ sdk install maven
 $ sdk install kscript
 ```
 
-**macOS:**
-
-```bash
-$ brew install kotlin maven holgerbrandl/tap/kscript
-```
-
 ## Licence
 
 ```
-Copyright 2021 Sebastiano Poggi
+Copyright 2022 Sebastiano Poggi
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
