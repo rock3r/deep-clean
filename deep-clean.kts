@@ -2,12 +2,12 @@
 
 @file:DependsOn("com.offbytwo:docopt:0.6.0.20150202")
 
-import Deep_clean.CommandLineArguments
 import org.docopt.Docopt
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
+import kotlin.system.exitProcess
 
 typealias CommandLineArguments = Map<String, Any>
 
@@ -75,6 +75,11 @@ if (dryRun) println("\nℹ️  This is a dry-run. No files will be moved/deleted
 
 val wetRun = dryRun.not()
 val gradlew = "./gradlew" + if (isOsWindows()) ".bat" else ""
+
+if (!File(gradlew.removePrefix("./")).exists()) {
+    printInBold("❌  Could not find Gradle wrapper in the work directory: $gradlew")
+    exitProcess(-1)
+}
 
 Runtime.getRuntime().apply {
     printInBold("⏳ Executing Gradle clean...")
