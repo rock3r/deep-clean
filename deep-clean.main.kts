@@ -1,9 +1,13 @@
 #!/usr/bin/env kotlin
-@file:DependsOn("com.github.ajalt.clikt:clikt:5.0.3")
+@file:Repository("https://repo1.maven.org/maven2/")
+@file:DependsOn("com.github.ajalt.clikt:clikt-jvm:5.0.3")
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.versionOption
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -21,9 +25,10 @@ val workingDir = File(Paths.get("").toAbsolutePath().toString())
 class DeepClean :
     CliktCommand(
         name = "deep-clean",
-        help =
-            "This script nukes all build caches from Gradle/Android projects. Run this in a Gradle/Android project folder.",
     ) {
+    override fun help(context: Context) =
+        "This script nukes all build caches from Gradle/Android projects. Run this in a Gradle/Android project folder."
+
     init {
         versionOption("2.0.0")
     }
